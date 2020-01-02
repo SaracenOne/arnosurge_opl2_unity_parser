@@ -10,6 +10,7 @@ public class ARNS_OPL2ParserScriptableWizard : UnityEditor.ScriptableWizard
 {
     public UnityEngine.Object opl2Asset = null;
     public bool overrideExistingGameObjects = true;
+    public bool overrideExistingModels = true;
     private void SetGameObjectParent(GameObject child, GameObject parent)
     {
         if (parent == null)
@@ -244,6 +245,27 @@ public class ARNS_OPL2ParserScriptableWizard : UnityEditor.ScriptableWizard
                     for (int i = 0; i < opl2.entries.Count; i++)
                     {
                         string objName = new string(opl2.entries[i].objName);
+
+                        string[] assetGUIDs = AssetDatabase.FindAssets(objName);
+                        GameObject prefab = null;
+                        for (int j = 0; j < assetGUIDs.Length; j++)
+                        {
+                            string assetPath = AssetDatabase.GUIDToAssetPath(assetGUIDs[j]);
+                            string assetNameWithoutExtension = Path.GetFileNameWithoutExtension(assetPath);
+
+                            if (assetNameWithoutExtension == objName ||
+                                assetNameWithoutExtension == objName + "_hi")
+                            {
+                                //string extension = Path.GetExtension(assetPath);
+                                //string trimmedPath = assetPath.TrimEnd(extension.ToCharArray());
+                                prefab = AssetDatabase.LoadAssetAtPath<GameObject>(assetPath);
+                                if (prefab != null)
+                                {
+                                    break;
+                                }
+                            }
+                        }
+
                         for (int j = 0; j < opl2.entries[i].objects.Count; j++)
                         {
                             ARNS_OPL2.ARNS_OPL2Entry.ARNS_OPL2Object current_opl2_object = opl2.entries[i].objects[j];
@@ -275,6 +297,23 @@ public class ARNS_OPL2ParserScriptableWizard : UnityEditor.ScriptableWizard
                                 current_opl2_object.scale.x,
                                 current_opl2_object.scale.y,
                                 current_opl2_object.scale.z);
+
+                            if (prefab != null && overrideExistingModels)
+                            {
+                                foreach (Transform child in gameObject.transform)
+                                {
+                                    if(child.gameObject.name == "model_instance")
+                                    {
+                                        DestroyImmediate(child.gameObject);
+                                    }
+                                }
+                                GameObject modelInstance = PrefabUtility.InstantiatePrefab(prefab) as GameObject;
+                                modelInstance.name = "model_instance";
+                                modelInstance.transform.parent = gameObject.transform;
+                                modelInstance.transform.localPosition = new Vector3(0.0f, 0.0f, 0.0f);
+                                modelInstance.transform.localRotation = new Quaternion(0.0f, 0.0f, 0.0f, 1.0f);
+                                modelInstance.transform.localScale = new Vector3(1.0f, 1.0f, 1.0f);
+                            }
                         }
                     }
                     stream.Close();
@@ -296,7 +335,12 @@ public class ARNS_OPL2ParserScriptableWizard : UnityEditor.ScriptableWizard
 
     void OnWizardUpdate()
     {
+        isValid = false;
 
+        if (opl2Asset)
+        {
+            isValid = true;
+        }
     }
 };
 
