@@ -9,6 +9,61 @@ using UnityEngine;
 public class ARNS_OPL2ParserScriptableWizard : UnityEditor.ScriptableWizard
 {
     public UnityEngine.Object opl2Asset = null;
+    public bool overrideExistingGameObjects = true;
+    private void SetGameObjectParent(GameObject child, GameObject parent)
+    {
+        if (parent == null)
+        {
+            child.transform.parent = null;
+        }
+        else
+        {
+            child.transform.parent = parent.transform;
+        }
+    }
+
+    private Transform FindGameObjectChildTransform(GameObject root, string gameObjectName)
+    {
+        Transform childTransform = null;
+
+        if (root != null)
+        {
+            childTransform = root.transform.Find(gameObjectName);
+        }
+        else
+        {
+            GameObject[] rootGameObjects = UnityEngine.SceneManagement.SceneManager.GetActiveScene().GetRootGameObjects();
+            foreach (GameObject currentGameObject in rootGameObjects)
+            {
+                if (currentGameObject.name == gameObjectName)
+                {
+                    childTransform = currentGameObject.transform;
+                    break;
+                }
+            }
+        }
+
+        return childTransform;
+    }
+
+    private GameObject GetOrCreateNamedGameObject(string gameObjectName, GameObject gameObjectParent)
+    {
+        Transform childTransform = null;
+
+        childTransform = FindGameObjectChildTransform(gameObjectParent, gameObjectName);
+
+        if (childTransform)
+        {
+            return childTransform.gameObject;
+        }
+        else
+        {
+            GameObject emptyGameObject = new GameObject(gameObjectName);
+            SetGameObjectParent(emptyGameObject, gameObjectParent);
+
+            return emptyGameObject;
+        }
+    }
 
     [Serializable]
     public class ARNS_OPL2
@@ -193,9 +248,18 @@ public class ARNS_OPL2ParserScriptableWizard : UnityEditor.ScriptableWizard
                         {
                             ARNS_OPL2.ARNS_OPL2Entry.ARNS_OPL2Object current_opl2_object = opl2.entries[i].objects[j];
 
-                            GameObject gameObject = new GameObject();
-                            gameObject.name = objName + "_" + j.ToString();
+                            string indexedObjName = objName + "_" + j.ToString();
+                            GameObject gameObject = null;
 
+                            if (overrideExistingGameObjects)
+                            {
+                                gameObject = GetOrCreateNamedGameObject(indexedObjName, null);
+                            }
+                            else
+                            {
+                                gameObject = new GameObject();
+                                gameObject.name = indexedObjName;
+                            }
                             gameObject.transform.localPosition = new Vector3(
                                 current_opl2_object.position.x,
                                 current_opl2_object.position.y,
