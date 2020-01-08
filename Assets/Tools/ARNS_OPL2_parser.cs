@@ -230,6 +230,18 @@ public class ARNS_OPL2ParserScriptableWizard : UnityEditor.ScriptableWizard
         }
     }
 
+    // https://forum.unity.com/threads/right-hand-to-left-handed-conversions.80679/
+    public static Quaternion ConvertMayaRotationToUnity(Vector3 rotation) {
+        Vector3 flippedRotation = new Vector3(rotation.x, -rotation.y, -rotation.z); // flip Y and Z axis for right->left handed conversion
+        // convert XYZ to ZYX
+        Quaternion qx = Quaternion.AngleAxis(flippedRotation.x, Vector3.right);
+        Quaternion qy = Quaternion.AngleAxis(flippedRotation.y, Vector3.up);
+        Quaternion qz = Quaternion.AngleAxis(flippedRotation.z, Vector3.forward);
+        Quaternion qq = qz * qy * qx; // this is the order
+        return qq;
+    }
+
+
     private void ParseEntities()
     {
         if(opl2Asset)
@@ -283,15 +295,19 @@ public class ARNS_OPL2ParserScriptableWizard : UnityEditor.ScriptableWizard
                                 gameObject.name = indexedObjName;
                             }
                             gameObject.transform.localPosition = new Vector3(
-                                current_opl2_object.position.x,
+                                -current_opl2_object.position.x,
                                 current_opl2_object.position.y,
-                                current_opl2_object.position.z) * 0.01f;
+                                current_opl2_object.position.z);
 
-                            gameObject.transform.localRotation = new Quaternion(
-                                current_opl2_object.rotation.x,
-                                current_opl2_object.rotation.y,
-                                current_opl2_object.rotation.z,
-                                current_opl2_object.rotation.w);
+                            Vector3 convertedRotation = new Vector3();
+
+                            convertedRotation = new Vector3(
+                                (current_opl2_object.rotation.y) * Mathf.Rad2Deg,
+                                (current_opl2_object.rotation.z) * Mathf.Rad2Deg,
+                                (current_opl2_object.rotation.w) * Mathf.Rad2Deg
+                                );
+
+                            gameObject.transform.localRotation = ConvertMayaRotationToUnity(convertedRotation);
 
                             gameObject.transform.localScale = new Vector3(
                                 current_opl2_object.scale.x,
